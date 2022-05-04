@@ -10,6 +10,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -34,6 +35,7 @@ class PlaceFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+
         if (viewModel.isPlaceSaved()) {
             val place = viewModel.getSavedPlace()
             val intent = Intent(context, WeatherActivity::class.java).apply {
@@ -46,6 +48,37 @@ class PlaceFragment : Fragment() {
             return
         }
 
+        val layoutManager = LinearLayoutManager(activity)
+        recyclerView.layoutManager = layoutManager
+        adapter = PlaceAdapter(this, viewModel.placeList)
+        recyclerView.adapter = adapter
+        searchPlaceEdit.addTextChangedListener { editable ->
+            val content = editable.toString()
+            if (content.isNotEmpty()) {
+                viewModel.searchPlaces(content)
+            } else {
+                recyclerView.visibility = View.GONE
+                bgImageView.visibility = View.VISIBLE
+                viewModel.placeList.clear()
+                adapter.notifyDataSetChanged()
+            }
+        }
+        viewModel.placeLiveData.observe(viewLifecycleOwner, Observer{ result ->
+            val places = result.getOrNull()
+            if (places != null) {
+                recyclerView.visibility = View.VISIBLE
+                bgImageView.visibility = View.GONE
+                viewModel.placeList.clear()
+                viewModel.placeList.addAll(places)
+                adapter.notifyDataSetChanged()
+            } else {
+                Toast.makeText(activity, "未能查询到任何地点", Toast.LENGTH_SHORT).show()
+                result.exceptionOrNull()?.printStackTrace()}
+        })
     }
+
+
+
 }
+
 
